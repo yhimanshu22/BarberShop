@@ -1,40 +1,38 @@
-# First stage: Build the app using Node.js
-FROM node:18-alpine as builder
-
-# Set the working directory inside the container
+# Stage 1: Build Stage
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copy the package.json and install dependencies
-COPY package.json package-lock.json ./
+# Copy package files and install dependencies
+COPY package.json ./
 RUN npm install
 
-# Copy the rest of the application files
+# Copy all files and build the project
 COPY . .
-
-# Build the app for production
 RUN npm run build
 
-# Second stage: Serve the app using a lightweight production image
+# Stage 2: Production Stage
 FROM node:18-alpine
-
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy only the necessary files from the builder stage
-COPY --from=builder /app/.next /app/.next
-COPY --from=builder /app/public /app/public
-COPY --from=builder /app/next.config.js /app/next.config.js
-COPY package.json package-lock.json /app/
-
-# Install only production dependencies
+# Copy only production dependencies
+COPY package.json ./
 RUN npm install --production
 
-# Set the environment variables
+# Copy build output and necessary files from the builder stage
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./next.config.js
+
+# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV NEXT_PUBLIC_API_URL=http://64.227.5.64:8000
+ENV NEXTAUTH_URL=http://localhost:8000
+ENV NEXTAUTH_SECRET = 12345
 
-# Expose the port the app will run on
+
+# Expose the application port
 EXPOSE 3000
 
-# Command to run the app
+# Start the application
 CMD ["npm", "start"]
